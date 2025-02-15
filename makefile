@@ -3,7 +3,7 @@ CFLAGS = -g -Wall -Wextra
 
 all: main
 
-main: main.o layer.o neural_network.o
+main: main.o layer.o neural_network.o matrix.o
 	${CC} ${CFLAGS} -o $@ $^
 
 %.o: %.c
