@@ -1,52 +1,50 @@
 #ifndef NEURAL_NETWORK_H
 #define NEURAL_NETWORK_H
-#include "layer.h"
+#include "linalg.h"
 #include "matrix.h"
-#include <cstddef>
 #include <iostream>
-#include <stdio.h>
 #include <vector>
-
-#define LEARNING_RATE 0.1
-
-typedef std::vector<matrix> network_layers;
-typedef std::vector<gradient_data> network_buffers;
 
 class neural_network {
 public:
-    vector input_m;
-    vector output_m;
-    network_layers layers_m;
-    network_buffers buf_m;
-    const unsigned int num_hidden_layers;
+    // int inodes;
+    // int hnodes;
+    // int onodes;
+    // double lr;
 
-    // Methods
-    neural_network(unsigned int num_hidden_layers) : num_hidden_layers{num_hidden_layers} {
-        layers_m = std::vector<matrix>(num_hidden_layers + 1);
-        buf_m = std::vector<gradient_data>(num_hidden_layers + 2);
+    // matrix wih;
+    // matrix who;
+    double learning_rate;
+    int num_layers;
+    std::vector<matrix> layers;
+    std::vector<matrix> errors;
+    std::vector<matrix> weights;
 
-        buf_m[0].vals = (vector) new double[INPUT_SIZE];
-        buf_m[0].deriv = (vector) new double[INPUT_SIZE];
-        layers_m[0] = (matrix) new double[HIDDEN_SIZE * INPUT_SIZE];
-        for (int i = 1; i < num_hidden_layers; ++i) {
-            layers_m[i] = (matrix) new double[HIDDEN_SIZE * HIDDEN_SIZE];
-            buf_m[i].vals = (vector) new double[HIDDEN_SIZE];
-            buf_m[i].deriv = (vector) new double[HIDDEN_SIZE];
+
+    matrix forward_propagate(matrix &in);
+    void backward_propagate(matrix &targets);
+
+    neural_network(int num_layers, int nodes_per_layer[],
+                 double learning_rate)
+      : num_layers{num_layers}, learning_rate{learning_rate} {
+
+        layers = std::vector<matrix>(num_layers);
+        errors = std::vector<matrix>(num_layers);
+        weights = std::vector<matrix>(num_layers);
+
+        for (int l = 0; l < num_layers - 1; ++l) {
+            layers[l] = zero_matrix(nodes_per_layer[l], 1);
+            errors[l] = zero_matrix(nodes_per_layer[l], 1);
+            weights[l] = rand_matrix(nodes_per_layer[l+1], nodes_per_layer[l]);
         }
-        layers_m[num_hidden_layers] = (matrix) new double[OUTPUT_SIZE * HIDDEN_SIZE];
-        buf_m[num_hidden_layers].vals = (vector) new double[HIDDEN_SIZE];
-        buf_m[num_hidden_layers].deriv = (vector) new double[HIDDEN_SIZE];
-        buf_m[num_hidden_layers + 1].vals = (vector) new double[OUTPUT_SIZE];
-        buf_m[num_hidden_layers + 1].deriv = (vector) new double[OUTPUT_SIZE];
 
-        input_m = layers_m[0];
-        output_m = layers_m[num_hidden_layers + 1];
+        layers[num_layers - 1] = zero_matrix(nodes_per_layer[num_layers - 1], 1);
+        errors[num_layers - 1] = zero_matrix(nodes_per_layer[num_layers - 1], 1);
+
     }
 
-    void propagate_forwards();
-    void propagate_backwards();
-    // DEBUG
-    void dbg_print();
+    matrix query(matrix &input);
+    void train(std::vector<std::pair<matrix, matrix>> &data, int epochs);
 };
 
 #endif /* ifndef NEURAL_NETWORK_H */

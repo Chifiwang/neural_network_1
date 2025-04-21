@@ -1,61 +1,104 @@
-#include "layer.h"
-#include "neural_network.h"
 #include "matrix.h"
+#include "neural_network.h"
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <utility>
+
+#define TRAINING_SET "mnist_mini_train.csv"
+#define TESTING_SET "mnist_mini_test.csv"
+#define FULL_TRAIN "mnist_train.csv"
+#define FULL_TEST "mnist_test.csv"
+#define TEST_TRAINING "test_train.csv"
+
+void init_data(std::string name, std::vector<matrix> &inputs, std::vector<matrix> &targets) {
+    std::ifstream train;
+    train.open(name);
+
+    int target;
+    std::string in;
+    int c = 0;
+    while (std::getline(train, in)) {
+        std::istringstream iss(in);
+        std::string token;
+
+        std::getline(iss, token, ',');
+        target = std::stoi(token);
+
+        inputs.push_back(zero_matrix(784, 1));
+        targets.push_back(zero_matrix(10, 1));
+
+        for (int i = 0; i < 10; ++i) {
+            if (i == target) {
+                targets[c].mat[i] = 1;
+            } else {
+                targets[c].mat[i] = 0;
+            }
+        }
+
+        int r = 0;
+        while (std::getline(iss, token, ',')) {
+            inputs[c].mat[r] = std::stoi(token) / 255.0;
+            r++;
+        }
+        c++;
+    }
+}
 
 int main() {
-    neural_network net(3);
+    int layer_sizes[] = {784, 500, 10};
+    // int layer_sizes[] = {3, 4, 3};
+    neural_network n = neural_network(3, layer_sizes, 0.17);
 
-    net.propagate_forwards();
-    net.dbg_print();
-    matrix mat = (matrix) malloc(sizeof(double) * 9);
-    mat[index(0, 0, 3)] = 0.3;
-    mat[index(0, 1, 3)] = 0.7;
-    mat[index(0, 2, 3)] = 0.5;
-    mat[index(1, 0, 3)] = 0.6;
-    mat[index(1, 1, 3)] = 0.5;
-    mat[index(1, 2, 3)] = 0.2;
-    mat[index(2, 0, 3)] = 0.8;
-    mat[index(2, 1, 3)] = 0.1;
-    mat[index(2, 2, 3)] = 0.9;
+    // std::vector<matrix> training_inputs = std::vector<matrix>(1);
+    // std::vector<matrix> training_targets = std::vector<matrix>(1);
+    std::vector<matrix> training_inputs = std::vector<matrix>();
+    std::vector<matrix> training_targets = std::vector<matrix>();
 
-    // vector vec = (vector) malloc(sizeof(double) * 3);
-    // vec[0] = 0.761;
-    // vec[1] = 0.603;
-    // vec[2] = 0.650;
+    init_data(TRAINING_SET, training_inputs, training_targets);
+
+    std::vector<std::pair<matrix, matrix>> data = std::vector<std::pair<matrix, matrix>>(training_targets.size());
+    for (int i = 0; i < training_inputs.size(); ++i) {
+        data[i] = std::make_pair(training_inputs[i], training_targets[i]);
+    }
+
+    n.train(data, 10);
+    // // n.query(training_inputs[0]);
     //
-    // gradient_data out;
-    // out.vals = (vector) malloc(sizeof(double) * 3);
-    // out.deriv = (vector) new double[3];
-    // mat_vec_mul(mat, vec, out, 3, 3, 3, 3);
-    // propagate_forwards(mat, vec, out, 3, 3);
+    // print_matrix(n.weights[0]);
+    // printf("\n");
+    // print_matrix(n.weights[1]);
+    // printf("\n");
+    // // print_matrix(n.layers[2]);
     //
-    // std::cout << out.vals[0] << ' ' << out.vals[1] << ' ' << out.vals[2] << '\n';
-    // std::cout << out.deriv[0] << ' ' << out.deriv[1] << ' ' << out.deriv[2] << '\n';
+    std::vector<matrix> testing_inputs = std::vector<matrix>();
+    std::vector<matrix> testing_targets = std::vector<matrix>();
 
-    matrix mat2 = (matrix) new double[4];
-    mat2[index(0, 0, 2)] = 2;
-    mat2[index(0, 1, 2)] = 4;
-    mat2[index(1, 0, 2)] = 3;
-    mat2[index(1, 1, 2)] = 1;
 
-    gradient_data out2;
-    out2.vals = new double[2];
-    out2.deriv = new double[2];
+    init_data(TESTING_SET, testing_inputs, testing_targets);
 
-    vector in = new double[2];
-    in[0] = 0.4;
-    in[1] = 0.5;
+    double acc = 0;
+    for (int in = 0; in < testing_inputs.size(); ++in) {
+        matrix o = n.query(testing_targets[in]);
+        for (int i = 0; i < o.c; ++i) {
+            int mx = 0, t = 0;
+            double mx_v = -100, mn = 0;
+            for (int j = 0; j < o.r; ++j) {
+                if (at(testing_targets[in], j, i) > 0.1) {
+                    t = j;
+                }
+                if (mx_v < at(o, j, i)) {
+                    mx = j;
+                    mx_v = at(o, j, i);
+                }
+                printf("%f ", at(o, j, i));
+            }
 
-    propagate_forwards(mat2, in, out2, 2, 2);
-    std::cout << out2.vals[0] << ' ' << out2.vals[1] << '\n';
-    std::cout << out2.deriv[0] << ' ' << out2.deriv[1] << '\n';
+            printf("%d %d %f\n", mx, t, mx_v);
+            acc += mx == t;
+        }
+    }
 
-    vector err = new double[2];
-    err[0] = 1.5;
-    err[1] = 0.5;
-
-    propagate_backwards(mat2, err, out2, 2, 2, 2, 2);
-    std::cout << mat2[0] << ' ' << mat2[1] << '\n';
-    std::cout << mat2[2] << ' ' << mat2[3] << '\n';
+    printf("%f\n", acc / testing_inputs.size());
 }

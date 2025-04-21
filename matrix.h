@@ -1,38 +1,47 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-// typedef std::vector<std::vector<double>> matrix;
-typedef double *matrix;
-typedef double *vector;
-struct gradient_data {
-    vector vals;
-    vector deriv;
+#include <cmath>
+struct matrix {
+    double *mat;
+    int r, c;
 };
 
-// constexpr matrix mat_mul(matrix &a, matrix &b);
-void mat_vec_mul(matrix a, vector x, vector out, int a_r, int a_c, int x_len, int out_len);
-void mat_vec_mul(matrix a, vector in, vector out, int in_len, int out_len);
-void mat_T_vec_mul(matrix a, vector x, vector out, int a_r, int a_c, int x_len, int out_len);
-void mat_T_vec_mul(matrix a, vector in, vector out, int in_len, int out_len);
-constexpr int index(int r, int c, int r_max) { return r * r_max + c; }
-constexpr int index_t(int r, int c, int a_r, int a_c) {
-    const int idx = index(r, c, a_r);
-    const int C = a_r * a_c - 1;
-    if (idx == C) {
-        return idx;
-    }
+struct vector {
+    double *vec;
+    int n;
+};
 
-    return (a_r * idx) % C;
+constexpr double sigmoid(double x) {
+    return 1/(1 + exp(-x));
 }
-constexpr int index_t_inv(int r, int c, int a_r, int a_c) {
-    const int idx = index(c, r, a_c);
-    const int C = a_r * a_c - 1;
-    if (idx == C) {
-        return idx;
+constexpr double sigmoid_derivative(double x) {
+    const double sigmoid_x = sigmoid(x);
+    return sigmoid_x * (1 - sigmoid_x);
+}
+constexpr void sigmoid(matrix x) {
+    for (int i = 0; i < x.r * x.c; ++i) {
+        x.mat[i] = sigmoid(x.mat[i]);
     }
-
-    return (a_c * idx) % C;
+}
+constexpr void sigmoid_derivative(matrix x) {
+    for (int i = 0; i < x.r * x.c; ++i) {
+        x.mat[i] = sigmoid_derivative(x.mat[i]);
+    }
 }
 
+double at(matrix m, int r, int c);
+double at_t(matrix m, int r, int c);
+double at(vector v, int i);
+
+matrix matmul(matrix a, matrix b);
+matrix matmul_tl(matrix a, matrix b);
+matrix matmul_tr(matrix a, matrix b);
+matrix compute_error(matrix target, matrix current);
+matrix update_weights(matrix errors, matrix ok, matrix oj);
+
+matrix zero_matrix(int r, int c);
+matrix rand_matrix(int r, int c);
+void print_matrix(matrix m);
 
 #endif /* ifndef MATRIX_H */
