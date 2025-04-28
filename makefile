@@ -1,13 +1,14 @@
 CC = clang++
-CFLAGS = -g -Wall -Wextra
+CFLAGS = -g -Wall -Wextra -O3
 
-all: main
+all: utils.hpp random.hpp main
 
-main: main.o matrix.o neural_network.o
+main: main.o neural_network.o
 	${CC} ${CFLAGS} -o $@ $^
 
-%.o: %.c %.h
+%.o: %.cpp %.hpp
 	${CC} ${CFLAGS} -c $<
 
+.PHONY: clean
 clean:
 	rm *.o main

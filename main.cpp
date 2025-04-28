@@ -1,7 +1,7 @@
-#include "matrix.h"
-#include "neural_network.h"
+#include "utils.hpp"
+#include "neural_network.hpp"
+#include <cstddef>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -10,94 +10,86 @@
 #define TESTING_SET "mnist_mini_test.csv"
 #define FULL_TRAIN "mnist_train.csv"
 #define FULL_TEST "mnist_test.csv"
-#define TEST_TRAINING "test_train.csv"
 
-void init_data(std::string name, std::vector<matrix> &inputs, std::vector<matrix> &targets) {
+void init_data(std::string name, std::vector<vector> &inputs, std::vector<vector> &targets) {
     std::ifstream train;
     train.open(name);
 
     int target;
     std::string in;
     int c = 0;
-    while (std::getline(train, in)) {
+    while (std::getline(train, in, '\n')) {
         std::istringstream iss(in);
         std::string token;
 
         std::getline(iss, token, ',');
         target = std::stoi(token);
 
-        inputs.push_back(zero_matrix(784, 1));
-        targets.push_back(zero_matrix(10, 1));
+        inputs.push_back(zero_vector(784));
+        targets.push_back(zero_vector(10));
 
         for (int i = 0; i < 10; ++i) {
             if (i == target) {
-                targets[c].mat[i] = 1;
+                targets[c][i] = 1;
             } else {
-                targets[c].mat[i] = 0;
+                targets[c][i] = 0;
             }
         }
 
         int r = 0;
         while (std::getline(iss, token, ',')) {
-            inputs[c].mat[r] = std::stoi(token) / 255.0;
+            inputs[c][r] = std::stoi(token) / 255.0;
             r++;
         }
+
         c++;
     }
 }
 
 int main() {
     int layer_sizes[] = {784, 500, 10};
-    // int layer_sizes[] = {3, 4, 3};
-    neural_network n = neural_network(3, layer_sizes, 0.17);
+    neural_network n = neural_network(3, layer_sizes, 0.18, 0.85);
 
-    // std::vector<matrix> training_inputs = std::vector<matrix>(1);
-    // std::vector<matrix> training_targets = std::vector<matrix>(1);
-    std::vector<matrix> training_inputs = std::vector<matrix>();
-    std::vector<matrix> training_targets = std::vector<matrix>();
+    std::vector<vector> training_inputs = std::vector<vector>();
+    std::vector<vector> training_targets = std::vector<vector>();
 
-    init_data(TRAINING_SET, training_inputs, training_targets);
+    init_data(FULL_TRAIN, training_inputs, training_targets);
 
-    std::vector<std::pair<matrix, matrix>> data = std::vector<std::pair<matrix, matrix>>(training_targets.size());
+    std::vector<std::pair<vector, vector>> data = std::vector<std::pair<vector, vector>>(training_targets.size());
     for (int i = 0; i < training_inputs.size(); ++i) {
         data[i] = std::make_pair(training_inputs[i], training_targets[i]);
     }
 
     n.train(data, 10);
-    // // n.query(training_inputs[0]);
-    //
-    // print_matrix(n.weights[0]);
-    // printf("\n");
-    // print_matrix(n.weights[1]);
-    // printf("\n");
-    // // print_matrix(n.layers[2]);
-    //
-    std::vector<matrix> testing_inputs = std::vector<matrix>();
-    std::vector<matrix> testing_targets = std::vector<matrix>();
+
+    std::vector<vector> testing_inputs = std::vector<vector>();
+    std::vector<vector> testing_targets = std::vector<vector>();
 
 
-    init_data(TESTING_SET, testing_inputs, testing_targets);
+    init_data(FULL_TEST, testing_inputs, testing_targets);
 
     double acc = 0;
-    for (int in = 0; in < testing_inputs.size(); ++in) {
-        matrix o = n.query(testing_targets[in]);
-        for (int i = 0; i < o.c; ++i) {
-            int mx = 0, t = 0;
-            double mx_v = -100, mn = 0;
-            for (int j = 0; j < o.r; ++j) {
-                if (at(testing_targets[in], j, i) > 0.1) {
-                    t = j;
-                }
-                if (mx_v < at(o, j, i)) {
-                    mx = j;
-                    mx_v = at(o, j, i);
-                }
-                printf("%f ", at(o, j, i));
+    for (std::size_t in = 0; in < testing_inputs.size(); ++in) {
+        vector o = n.query(testing_inputs[in]);
+        int mx = 0, t = 0;
+        double mx_v = -100, mn = 0;
+        for (int i = 0; i < testing_targets[in].n; ++i) {
+            if (testing_targets[in][i] > 0) {
+                t = i;
+                break;
             }
-
-            printf("%d %d %f\n", mx, t, mx_v);
-            acc += mx == t;
         }
+        for (int j = 0; j < o.n; ++j) {
+            if (mx_v < o[j]) {
+                mx = j;
+                mx_v = o[j];
+            }
+            printf("%f ", o[j]);
+        }
+
+
+        printf("%d %d %f\n", mx, t, mx_v);
+        acc += mx == t;
     }
 
     printf("%f\n", acc / testing_inputs.size());
