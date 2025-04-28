@@ -48,7 +48,7 @@ void init_data(std::string name, std::vector<vector> &inputs, std::vector<vector
 
 int main() {
     int layer_sizes[] = {784, 500, 10};
-    neural_network n = neural_network(3, layer_sizes, 0.18, 0.85);
+    neural_network n = neural_network(3, layer_sizes, 0.17, 0.85);
 
     std::vector<vector> training_inputs = std::vector<vector>();
     std::vector<vector> training_targets = std::vector<vector>();
